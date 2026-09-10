@@ -65,7 +65,10 @@ export class PlaywrightSurface implements SurfaceAdapter {
       const frameRef: FrameRef = { name: frame.name() || null };
       frameRefs.push(frameRef);
 
-      const raw = await this.extractElements(frame).catch(() => [] as RawElement[]);
+      const raw = await this.extractElements(frame).catch((err: unknown) => {
+        console.warn(`[surface] element extraction failed for frame ${frameRef.name ?? "(main)"}:`, err);
+        return [] as RawElement[];
+      });
       for (const item of raw) {
         elements.push(buildElementSnapshot(item, frameRef));
       }
@@ -84,18 +87,24 @@ export class PlaywrightSurface implements SurfaceAdapter {
   }
 
   private async extractElements(frame: Frame): Promise<RawElement[]> {
+    // No named function declarations inside this callback: Playwright
+    // serializes only the callback's own source for page.evaluate(), and
+    // esbuild-based transpilers (tsx included) inject a `__name(...)` helper
+    // call after named functions for stack-trace fidelity -- that helper
+    // lives in the surrounding module scope, not in the page, so a nested
+    // named function here throws "ReferenceError: __name is not defined"
+    // inside the browser and silently loses every element (caught below).
     return frame.evaluate((selector) => {
-      function attrsOf(el: Element): Record<string, string> {
-        const out: Record<string, string> = {};
-        for (const attr of Array.from(el.attributes)) out[attr.name] = attr.value;
-        return out;
-      }
-      return Array.from(document.querySelectorAll(selector)).map((el) => ({
-        tag: el.tagName.toLowerCase(),
-        text: (el as HTMLElement).innerText?.trim() || null,
-        value: (el as HTMLInputElement).value ?? null,
-        attributes: attrsOf(el),
-      }));
+      return Array.from(document.querySelectorAll(selector)).map((el) => {
+        const attributes: Record<string, string> = {};
+        for (const attr of Array.from(el.attributes)) attributes[attr.name] = attr.value;
+        return {
+          tag: el.tagName.toLowerCase(),
+          text: (el as HTMLElement).innerText?.trim() || null,
+          value: (el as HTMLInputElement).value ?? null,
+          attributes,
+        };
+      });
     }, INTERACTIVE_SELECTOR);
   }
 

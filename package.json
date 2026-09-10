@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.1",
+    "@anthropic-ai/sdk": "^0.124.0",
     "express": "^4.21.1",
     "playwright": "^1.48.0",
     "zod": "^3.23.8"
