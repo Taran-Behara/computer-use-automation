@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# Evidence can contain screenshots/traces — keep curated examples only, not raw dumps
+/evidence/raw/
